@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, make_response, redirect
 from mongita import MongitaClientDisk
 from bson import ObjectId
 
+#flask --app quotes --debug run
+
 app = Flask(__name__)
 
 # create a mongita client connection
@@ -66,10 +68,10 @@ def post_login():
     user_collection = user_db.user_collection
     # look for the user
     user_data = list(user_collection.find({"user": user}))
-    if len(user_data) != 1:
-        response = redirect("/login")
-        response.delete_cookie("session_id")
-        return response
+    #if len(user_data) != 1:
+     #   response = redirect("/login")
+     #   response.delete_cookie("session_id")
+     #   return response
     session_id = str(uuid.uuid4())
     # open the session collection
     session_collection = session_db.session_collection
