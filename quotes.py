@@ -126,11 +126,12 @@ def post_add():
     user = session_data.get("user", "unknown user")
     text = request.form.get("text", "")
     author = request.form.get("author", "")
-    if text != "" and author != "":
+    date = request.form.get("date", "")
+    if text != "" and author != "" and date!="":
         # open the quotes collection
         quotes_collection = quotes_db.quotes_collection
         # insert the quote
-        quote_data = {"owner": user, "text": text, "author": author}
+        quote_data = {"owner": user, "text": text, "author": author, "date":date}
         quotes_collection.insert_one(quote_data)
     # usually do a redirect('....')
     return redirect("/quotes")
