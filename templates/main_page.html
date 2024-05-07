@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Page</title>
+    <!-- Include any necessary CSS libraries or stylesheets -->
+</head>
+<body>
+    <h1>Welcome, {{ user }}!</h1>
+
+    <!-- Add a form to allow users to add a new quote -->
+    <form action="/add" method="GET">
+        <button type="submit">Add New Quote</button>
+    </form>
+
+    <!-- Display the list of quotes -->
+    <ul>
+        {% for quote in quotes %}
+        <li>
+            <!-- Display the quote text and author -->
+            <p>{{ quote.text }} - {{ quote.author }}</p>
+
+            <!-- Add buttons to edit and delete the quote -->
+            {% if quote.owner == user %}
+            <form action="/edit/{{quote.id}}" method="GET">
+                <button type="submit">Edit</button>
+            </form>
+            <form action="/delete/{{quote.id}}" method="POST">
+                <button type="submit">Delete</button>
+            </form>
+        {% endif %}
+        
+        <!-- Add a form to allow users to add a comment -->
+
+
+            <!-- Display the comments for the quote -->
+            <ul>
+                {% if quote.comments %}
+                    {% for comment in quote.comments %}
+                        <li>{{ comment }}</li>
+                    {% endfor %}
+                {% endif %}
+            </ul>            
+        </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Include any necessary JavaScript libraries or scripts -->
+</body>
+</html>

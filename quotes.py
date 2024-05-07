@@ -17,6 +17,24 @@ user_db = client.user_db
 import uuid
 
 @app.route("/", methods=["GET"])
+@app.route("/main_page", methods=["GET"])
+def main_page():
+    # Check if the user is logged in
+    if "user" not in session:
+        # If not logged in, redirect to the login page
+        return redirect("/login")
+    user = session.get("user")
+    # open the quotes collection
+    quotes_collection = quotes_db.quotes_collection
+    # load the data
+    data = list(quotes_collection.find({}))
+    for item in data:
+        item["_id"] = str(item["_id"])
+        item["object"] = ObjectId(item["_id"])
+    # Render the main page template
+    return render_template("main_page.html", quotes=data, user=user)
+
+
 @app.route("/quotes", methods=["GET"])
 def get_quotes():
     session_id = session.get("session_id")
