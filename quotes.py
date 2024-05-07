@@ -1,11 +1,11 @@
-from flask import Flask, render_template, request, make_response, redirect
+from flask import Flask, render_template, request, make_response, redirect, session, flash
 from mongita import MongitaClientDisk
 from bson import ObjectId
 
 #flask --app quotes --debug run
 
 app = Flask(__name__)
-
+app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 # create a mongita client connection
 client = MongitaClientDisk()
 
@@ -19,21 +19,11 @@ import uuid
 @app.route("/", methods=["GET"])
 @app.route("/quotes", methods=["GET"])
 def get_quotes():
-    session_id = request.cookies.get("session_id", None)
+    session_id = session.get("session_id")
+    user = session.get("user")
     if not session_id:
-        response = redirect("/login")
-        return response
-    # open the session collection
-    session_collection = session_db.session_collection
-    # get the data for this session
-    session_data = list(session_collection.find({"session_id": session_id}))
-    if len(session_data) == 0:
-        response = redirect("/logout")
-        return response
-    assert len(session_data) == 1
-    session_data = session_data[0]
-    # get some information from the session
-    user = session_data.get("user", "unknown user")
+        return redirect("/login")
+
     # open the quotes collection
     quotes_collection = quotes_db.quotes_collection
     # load the data
@@ -47,143 +37,150 @@ def get_quotes():
         data=data,
         user=user,
     )
-    response = make_response(html)
-    response.set_cookie("session_id", session_id)
-    return response
+    return make_response(html)
 
 
 @app.route("/login", methods=["GET"])
 def get_login():
-    session_id = request.cookies.get("session_id", None)
+    session_id = session.get("session_id")
     print("Pre-login session id = ", session_id)
     if session_id:
         return redirect("/quotes")
     return render_template("login.html")
 
-
 @app.route("/login", methods=["POST"])
 def post_login():
     user = request.form.get("user", "")
+    password = request.form.get("password", "")
+
     # open the user collection
     user_collection = user_db.user_collection
-    # look for the user
-    user_data = list(user_collection.find({"user": user}))
-    #if len(user_data) != 1:
-     #   response = redirect("/login")
-     #   response.delete_cookie("session_id")
-     #   return response
-    session_id = str(uuid.uuid4())
-    # open the session collection
-    session_collection = session_db.session_collection
-    # insert the user
-    session_collection.delete_one({"session_id": session_id})
-    session_data = {"session_id": session_id, "user": user}
-    session_collection.insert_one(session_data)
-    response = redirect("/quotes")
-    response.set_cookie("session_id", session_id)
-    return response
+    print("Received login attempt - Username:", user, "Password:", password)  # Debugging statement
 
+    # look for the user
+    user_data = user_collection.find_one({"username": user})
+    print("User data found:", user_data)  # Debugging statement
+
+    # Check if the user exists and the password matches
+    if user_data and user_data["password"] == password:
+        # Create session for the user
+        session_id = str(uuid.uuid4())
+        session["session_id"] = session_id
+        session["user"] = user
+        print("Session ID:", session_id)  # Add this line
+        return redirect("/quotes")
+    else:
+        print("Login failed")
+        return redirect("/login")
+
+@app.route("/register", methods=["GET"])
+def get_register():
+    session_id =session.get("session_id")
+    print("Pre-login session id = ", session_id)
+    if session_id:
+        return redirect("/quotes")
+    return render_template("register.html")
+
+@app.route("/register", methods=["POST"])
+def post_register():
+    user = request.form.get("user", "")
+    password = request.form.get("password", "")
+    user_collection=user_db.user_collection
+    user_data = {"username":user, "password":password}
+    user_collection.insert_one(user_data)
+    print("User collection after registration:", list(user_collection.find()))
+
+    session_id = str(uuid.uuid4())
+    session["session_id"] = session_id
+    session["user"] = user
+
+    return redirect("/")
 
 @app.route("/logout", methods=["GET"])
 def get_logout():
-    # get the session id
-    session_id = request.cookies.get("session_id", None)
-    if session_id:
-        # open the session collection
-        session_collection = session_db.session_collection
-        # delete the session
-        session_collection.delete_one({"session_id": session_id})
-    response = redirect("/login")
-    response.delete_cookie("session_id")
-    return response
+    # Clear the session data
+    session.clear()
+    # Redirect the user to the login page
+    return redirect("/login")
 
 
 @app.route("/add", methods=["GET"])
 def get_add():
-    session_id = request.cookies.get("session_id", None)
+    session_id = session.get("session_id")
     if not session_id:
-        response = redirect("/login")
-        return response
+        return redirect("/login")
     return render_template("add_quote.html")
 
 
 @app.route("/add", methods=["POST"])
 def post_add():
-    session_id = request.cookies.get("session_id", None)
+    session_id = session.get("session_id")
     if not session_id:
-        response = redirect("/login")
-        return response
-    # open the session collection
-    session_collection = session_db.session_collection
-    # get the data for this session
-    session_data = list(session_collection.find({"session_id": session_id}))
-    if len(session_data) == 0:
-        response = redirect("/logout")
-        return response
-    assert len(session_data) == 1
-    session_data = session_data[0]
-    # get some information from the session
-    user = session_data.get("user", "unknown user")
+        return redirect("/login")
+    
+    # Get the user from the session
+    user = session.get("user", "unknown user")
+    
+    # Get form data
     text = request.form.get("text", "")
     author = request.form.get("author", "")
     date = request.form.get("date", "")
-    if text != "" and author != "" and date!="":
-        # open the quotes collection
+    
+    # Check if all required fields are provided
+    if text != "" and author != "" and date != "":
+        # Open the quotes collection
         quotes_collection = quotes_db.quotes_collection
-        # insert the quote
-        quote_data = {"owner": user, "text": text, "author": author, "date":date}
+        # Insert the quote
+        quote_data = {"owner": user, "text": text, "author": author, "date": date}
         quotes_collection.insert_one(quote_data)
-    # usually do a redirect('....')
+    
     return redirect("/quotes")
 
 
 @app.route("/edit/<id>", methods=["GET"])
 def get_edit(id=None):
-    session_id = request.cookies.get("session_id", None)
+    session_id = session.get("session_id")
     if not session_id:
-        response = redirect("/login")
-        return response
+        return redirect("/login")
     if id:
-        # open the quotes collection
+        # Open the quotes collection
         quotes_collection = quotes_db.quotes_collection
-        # get the item
+        # Get the item
         data = quotes_collection.find_one({"_id": ObjectId(id)})
-        data["id"] = str(data["_id"])
-        return render_template("edit_quote.html", data=data)
-    # return to the quotes page
+        if data:
+            data["id"] = str(data["_id"])
+            return render_template("edit_quote.html", data=data)
     return redirect("/quotes")
 
 
 @app.route("/edit", methods=["POST"])
 def post_edit():
-    session_id = request.cookies.get("session_id", None)
+    session_id = session.get("session_id")
     if not session_id:
-        response = redirect("/login")
-        return response
+        return redirect("/login")
+    
     _id = request.form.get("_id", None)
     text = request.form.get("text", "")
     author = request.form.get("author", "")
     if _id:
-        # open the quotes collection
+        # Open the quotes collection
         quotes_collection = quotes_db.quotes_collection
-        # update the values in this particular record
+        # Update the values in this particular record
         values = {"$set": {"text": text, "author": author}}
         data = quotes_collection.update_one({"_id": ObjectId(_id)}, values)
-    # do a redirect('....')
+    
     return redirect("/quotes")
 
 
 @app.route("/delete", methods=["GET"])
 @app.route("/delete/<id>", methods=["GET"])
 def get_delete(id=None):
-    session_id = request.cookies.get("session_id", None)
+    session_id = session.get("session_id")
     if not session_id:
-        response = redirect("/login")
-        return response
+        return redirect("/login")
     if id:
-        # open the quotes collection
+        # Open the quotes collection
         quotes_collection = quotes_db.quotes_collection
-        # delete the item
+        # Delete the item
         quotes_collection.delete_one({"_id": ObjectId(id)})
-    # return to the quotes page
     return redirect("/quotes")
