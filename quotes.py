@@ -27,7 +27,7 @@ def get_quotes():
     # open the quotes collection
     quotes_collection = quotes_db.quotes_collection
     # load the data
-    data = list(quotes_collection.find({"owner":user}))
+    data = list(quotes_collection.find({}))
     for item in data:
         item["_id"] = str(item["_id"])
         item["object"] = ObjectId(item["_id"])
@@ -128,13 +128,13 @@ def post_add():
     text = request.form.get("text", "")
     author = request.form.get("author", "")
     date = request.form.get("date", "")
-    
+    can_comment = request.form.get("cancomment", False)
     # Check if all required fields are provided
     if text != "" and author != "" and date != "":
         # Open the quotes collection
         quotes_collection = quotes_db.quotes_collection
         # Insert the quote
-        quote_data = {"owner": user, "text": text, "author": author, "date": date}
+        quote_data = {"owner": user, "text": text, "author": author, "date": date, "comments":can_comment}
         quotes_collection.insert_one(quote_data)
     
     return redirect("/quotes")

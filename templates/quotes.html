@@ -14,8 +14,13 @@
                   <h5 class="card-title">{{item["owner"]}}</h5>
                   <h6 class="card-subtitle mb-2 text-muted">{{item["text"]}}</h6>
                   <p class="card-text"> - {{item["author"]}}, {{item["date"]}}</p>
-                  <a href="/edit/{{item['_id']}}"><i class="material-icons">mode_edit</i></a>
-                  <a href="/delete/{{item['_id']}}"><i class="material-icons">delete</i></a>
+                  {% if item["owner"] == user %}
+                    <a href="/edit/{{item['_id']}}"><i class="material-icons">mode_edit</i></a>
+                    <a href="/delete/{{item['_id']}}"><i class="material-icons">delete</i></a>
+                  {% endif %}
+                  {% if item["comments"] %}
+                    <a href="/add_comment/{{ item['_id'] }}" class="btn-secondary btn">Add a comment</a>
+                  {% endif %}
                 </div>
               </div>
             </div>
