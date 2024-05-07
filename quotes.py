@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, make_response, redirect, session, flash
 from mongita import MongitaClientDisk
 from bson import ObjectId
-
+from passwords import hash_password, check_password
 #flask --app quotes --debug run
 
 app = Flask(__name__)
@@ -62,7 +62,7 @@ def post_login():
     print("User data found:", user_data)  # Debugging statement
 
     # Check if the user exists and the password matches
-    if user_data and user_data["password"] == password:
+    if user_data and check_password(password, user_data["password"], user_data["salt"]):
         # Create session for the user
         session_id = str(uuid.uuid4())
         session["session_id"] = session_id
@@ -85,8 +85,11 @@ def get_register():
 def post_register():
     user = request.form.get("user", "")
     password = request.form.get("password", "")
+
+    hashed_password, salt = hash_password(password)
+
     user_collection=user_db.user_collection
-    user_data = {"username":user, "password":password}
+    user_data = {"username":user, "password":hashed_password, "salt":salt}
     user_collection.insert_one(user_data)
     print("User collection after registration:", list(user_collection.find()))
 
