@@ -15,7 +15,7 @@ session_db = client.session_db
 user_db = client.user_db
 
 import uuid
-
+#comment
 @app.route("/", methods=["GET"])
 @app.route("/main_page", methods=["GET"])
 def main_page():
